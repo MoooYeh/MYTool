@@ -6,6 +6,15 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.plaf.FontUIResource;
 import java.awt.*;
+import java.net.URI;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 @Component
 public class MainFrame extends JFrame {
@@ -80,6 +89,9 @@ public class MainFrame extends JFrame {
                 "关于",
                 JOptionPane.INFORMATION_MESSAGE);
         });
+        JMenuItem downloadFFmpegItem = new JMenuItem("下载 FFmpeg");
+        downloadFFmpegItem.addActionListener(e -> downloadFFmpeg());
+        helpMenu.add(downloadFFmpegItem);
         helpMenu.add(aboutItem);
         
         menuBar.add(fileMenu);
@@ -120,5 +132,134 @@ public class MainFrame extends JFrame {
         
         // 将主面板添加到窗口
         add(mainPanel);
+    }
+    
+    private void downloadFFmpeg() {
+        String os = System.getProperty("os.name").toLowerCase();
+        String downloadUrl;
+        String fileName;
+        String extractPath;
+        
+        if (os.contains("windows")) {
+            downloadUrl = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-7.1.1-essentials_build.7z";
+            fileName = "ffmpeg-7.1.1-essentials_build.7z";
+            extractPath = "ffmpeg-7.1.1-essentials_build";
+        } else if (os.contains("mac")) {
+            downloadUrl = "https://evermeet.cx/ffmpeg/ffmpeg-7.1.1.7z";
+            fileName = "ffmpeg-7.1.1.7z";
+            extractPath = "ffmpeg";
+        } else {
+            JOptionPane.showMessageDialog(this, 
+                "不支持的操作系统: " + os, 
+                "错误", 
+                JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 创建进度对话框
+        JProgressBar progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+        JDialog progressDialog = new JDialog(this, "下载 FFmpeg", true);
+        progressDialog.setLayout(new BorderLayout());
+        progressDialog.add(progressBar, BorderLayout.CENTER);
+        progressDialog.setSize(300, 100);
+        progressDialog.setLocationRelativeTo(this);
+
+        // 在新线程中执行下载和解压
+        new Thread(() -> {
+            try {
+                // 下载文件
+                URL url = new URL(downloadUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                long fileSize = connection.getContentLengthLong();
+                
+                try (InputStream in = connection.getInputStream();
+                     FileOutputStream out = new FileOutputStream(fileName)) {
+                    
+                    byte[] buffer = new byte[8192];
+                    long downloaded = 0;
+                    int read;
+                    
+                    while ((read = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, read);
+                        downloaded += read;
+                        
+                        // 更新进度
+                        final int progress = (int) ((downloaded * 100) / fileSize);
+                        SwingUtilities.invokeLater(() -> {
+                            progressBar.setValue(progress);
+                            progressBar.setString("下载中: " + progress + "%");
+                        });
+                    }
+                }
+
+                // 解压文件
+                SwingUtilities.invokeLater(() -> {
+                    progressBar.setString("正在解压...");
+                });
+
+                ProcessBuilder processBuilder;
+                if (os.contains("windows")) {
+                    processBuilder = new ProcessBuilder("7z", "x", fileName);
+                } else {
+                    processBuilder = new ProcessBuilder("7z", "x", fileName);
+                }
+                Process process = processBuilder.start();
+                int exitCode = process.waitFor();
+
+                if (exitCode != 0) {
+                    throw new Exception("解压失败，请确保已安装 7-Zip");
+                }
+
+                // 移动 ffmpeg 可执行文件到当前目录
+                File ffmpegFile;
+                if (os.contains("windows")) {
+                    ffmpegFile = new File(extractPath + "/bin/ffmpeg.exe");
+                } else {
+                    ffmpegFile = new File(extractPath + "/ffmpeg");
+                }
+
+                if (!ffmpegFile.exists()) {
+                    throw new Exception("找不到 FFmpeg 可执行文件");
+                }
+
+                // 复制到当前目录
+                Files.copy(ffmpegFile.toPath(), new File("ffmpeg" + (os.contains("windows") ? ".exe" : "")).toPath(), 
+                    StandardCopyOption.REPLACE_EXISTING);
+
+                // 删除下载的压缩文件和临时目录
+                new File(fileName).delete();
+                deleteDirectory(new File(extractPath));
+
+                SwingUtilities.invokeLater(() -> {
+                    progressDialog.dispose();
+                    JOptionPane.showMessageDialog(this,
+                        "FFmpeg 安装完成！\n可执行文件已保存到: " + new File("ffmpeg" + (os.contains("windows") ? ".exe" : "")).getAbsolutePath(),
+                        "安装完成",
+                        JOptionPane.INFORMATION_MESSAGE);
+                });
+                
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> {
+                    progressDialog.dispose();
+                    JOptionPane.showMessageDialog(this,
+                        "安装失败: " + ex.getMessage(),
+                        "错误",
+                        JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }).start();
+
+        progressDialog.setVisible(true);
+    }
+
+    private void deleteDirectory(File directory) {
+        File[] allContents = directory.listFiles();
+        if (allContents != null) {
+            for (File file : allContents) {
+                deleteDirectory(file);
+            }
+        }
+        directory.delete();
     }
 } 
