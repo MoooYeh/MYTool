@@ -29,7 +29,7 @@ A desktop application developed using **Java** with **Swing** for UI and require
 
 - **JDK 17 or higher**
 - An environment supporting Swing
-- (If applicable) Maven 3.x or Gradle 7.x
+- (If applicable) Maven 3.x 
 
 ---
 
@@ -40,12 +40,3 @@ A desktop application developed using **Java** with **Swing** for UI and require
 1. Import the project into IntelliJ IDEA / Eclipse / NetBeans.
 2. Set the SDK to JDK 17.
 3. Execute the `main` method from the main class (e.g., `Main.java`).
-
-### Running via Command Line
-
-```bash
-# Compile the code
-javac --release 17 -d out src/**/*.java
-
-# Run the compiled program
-java -cp out com.example.tools.Main
