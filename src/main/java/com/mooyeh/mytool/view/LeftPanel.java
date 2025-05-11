@@ -9,6 +9,7 @@ import java.awt.event.*;
 public class LeftPanel extends JPanel {
     private JTree menuTree;
     private final Base64Panel base64Panel;
+    private final JsonPanel jsonPanel;
     private JPanel rightPanel;
     
     // 与右侧一致
@@ -20,8 +21,9 @@ public class LeftPanel extends JPanel {
     private static final Color SELECTED_TEXT_COLOR = new Color(51, 51,255);
     
     @Autowired
-    public LeftPanel(Base64Panel base64Panel) {
+    public LeftPanel(Base64Panel base64Panel, JsonPanel jsonPanel) {
         this.base64Panel = base64Panel;
+        this.jsonPanel = jsonPanel;
         
         setLayout(new BorderLayout());
         setPreferredSize(new Dimension(250, 0));
@@ -42,7 +44,7 @@ public class LeftPanel extends JPanel {
         String[] categories = {"编码工具", "文本工具", "网络工具"};
         String[][] tools = {
             {"Base64编解码", "URL编解码", "MD5加密"},
-            {"文本对比", "文本格式化", "正则测试"},
+            {"文本对比", "文本格式化", "JSON工具", "正则测试"},
             {"Ping测试", "端口扫描", "DNS查询"}
         };
         
@@ -109,6 +111,9 @@ public class LeftPanel extends JPanel {
                     case "Base64编解码":
                         showBase64Panel();
                         break;
+                    case "JSON工具":
+                        showJsonPanel();
+                        break;
                     default:
                         showWelcomePanel();
                         break;
@@ -152,5 +157,13 @@ public class LeftPanel extends JPanel {
             rightPanel.add(base64Panel, "base64");
         }
         ((CardLayout)rightPanel.getLayout()).show(rightPanel, "base64");
+    }
+    
+    private void showJsonPanel() {
+        // 如果JSON面板还不存在，创建它
+        if (rightPanel.getComponentCount() < 3) {
+            rightPanel.add(jsonPanel, "json");
+        }
+        ((CardLayout)rightPanel.getLayout()).show(rightPanel, "json");
     }
 } 
