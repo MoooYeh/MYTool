@@ -6,6 +6,8 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.plaf.FontUIResource;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Clipboard;
 import java.net.URI;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -90,7 +92,7 @@ public class MainFrame extends JFrame {
                 JOptionPane.INFORMATION_MESSAGE);
         });
         JMenuItem downloadFFmpegItem = new JMenuItem("下载 FFmpeg");
-        downloadFFmpegItem.addActionListener(e -> downloadFFmpeg());
+        downloadFFmpegItem.addActionListener(e -> showFFmpegDownloadInfo());
         helpMenu.add(downloadFFmpegItem);
         helpMenu.add(aboutItem);
         
@@ -134,20 +136,17 @@ public class MainFrame extends JFrame {
         add(mainPanel);
     }
     
-    private void downloadFFmpeg() {
+    private void showFFmpegDownloadInfo() {
         String os = System.getProperty("os.name").toLowerCase();
         String downloadUrl;
         String fileName;
-        String extractPath;
         
         if (os.contains("windows")) {
-            downloadUrl = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-7.1.1-essentials_build.7z";
-            fileName = "ffmpeg-7.1.1-essentials_build.7z";
-            extractPath = "ffmpeg-7.1.1-essentials_build";
+            downloadUrl = "https://www.alipan.com/s/NVqd9rAgPcT";
+            fileName = "ffmpeg.exe";
         } else if (os.contains("mac")) {
-            downloadUrl = "https://evermeet.cx/ffmpeg/ffmpeg-7.1.1.7z";
-            fileName = "ffmpeg-7.1.1.7z";
-            extractPath = "ffmpeg";
+            downloadUrl = "https://www.alipan.com/s/N61hVqCDmYu";
+            fileName = "ffmpeg";
         } else {
             JOptionPane.showMessageDialog(this, 
                 "不支持的操作系统: " + os, 
@@ -156,101 +155,65 @@ public class MainFrame extends JFrame {
             return;
         }
 
-        // 创建进度对话框
-        JProgressBar progressBar = new JProgressBar(0, 100);
-        progressBar.setStringPainted(true);
-        JDialog progressDialog = new JDialog(this, "下载 FFmpeg", true);
-        progressDialog.setLayout(new BorderLayout());
-        progressDialog.add(progressBar, BorderLayout.CENTER);
-        progressDialog.setSize(300, 100);
-        progressDialog.setLocationRelativeTo(this);
+        // 获取程序运行目录
+        String programDir = System.getProperty("user.dir");
+        
+        // 构建提示信息
+        StringBuilder message = new StringBuilder();
+        message.append("请按照以下步骤下载并安装 FFmpeg：\n\n");
+        message.append("1. 点击下方链接下载 FFmpeg：\n");
+        message.append(downloadUrl).append("\n\n");
+        message.append("2. 下载完成后，请将文件重命名为：").append(fileName).append("\n");
+        message.append("3. 将文件放到程序目录：\n");
+        message.append(programDir).append("\n\n");
+        message.append("4. 如果是 Mac 系统，请在终端中执行以下命令设置权限：\n");
+        message.append("chmod +x ").append(programDir).append("/").append(fileName).append("\n\n");
+        message.append("完成以上步骤后，程序将自动识别并使用 FFmpeg。");
 
-        // 在新线程中执行下载和解压
-        new Thread(() -> {
-            try {
-                // 下载文件
-                URL url = new URL(downloadUrl);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                long fileSize = connection.getContentLengthLong();
-                
-                try (InputStream in = connection.getInputStream();
-                     FileOutputStream out = new FileOutputStream(fileName)) {
-                    
-                    byte[] buffer = new byte[8192];
-                    long downloaded = 0;
-                    int read;
-                    
-                    while ((read = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, read);
-                        downloaded += read;
-                        
-                        // 更新进度
-                        final int progress = (int) ((downloaded * 100) / fileSize);
-                        SwingUtilities.invokeLater(() -> {
-                            progressBar.setValue(progress);
-                            progressBar.setString("下载中: " + progress + "%");
-                        });
-                    }
-                }
-
-                // 解压文件
-                SwingUtilities.invokeLater(() -> {
-                    progressBar.setString("正在解压...");
-                });
-
-                ProcessBuilder processBuilder;
-                if (os.contains("windows")) {
-                    processBuilder = new ProcessBuilder("7z", "x", fileName);
-                } else {
-                    processBuilder = new ProcessBuilder("7z", "x", fileName);
-                }
-                Process process = processBuilder.start();
-                int exitCode = process.waitFor();
-
-                if (exitCode != 0) {
-                    throw new Exception("解压失败，请确保已安装 7-Zip");
-                }
-
-                // 移动 ffmpeg 可执行文件到当前目录
-                File ffmpegFile;
-                if (os.contains("windows")) {
-                    ffmpegFile = new File(extractPath + "/bin/ffmpeg.exe");
-                } else {
-                    ffmpegFile = new File(extractPath + "/ffmpeg");
-                }
-
-                if (!ffmpegFile.exists()) {
-                    throw new Exception("找不到 FFmpeg 可执行文件");
-                }
-
-                // 复制到当前目录
-                Files.copy(ffmpegFile.toPath(), new File("ffmpeg" + (os.contains("windows") ? ".exe" : "")).toPath(), 
-                    StandardCopyOption.REPLACE_EXISTING);
-
-                // 删除下载的压缩文件和临时目录
-                new File(fileName).delete();
-                deleteDirectory(new File(extractPath));
-
-                SwingUtilities.invokeLater(() -> {
-                    progressDialog.dispose();
-                    JOptionPane.showMessageDialog(this,
-                        "FFmpeg 安装完成！\n可执行文件已保存到: " + new File("ffmpeg" + (os.contains("windows") ? ".exe" : "")).getAbsolutePath(),
-                        "安装完成",
-                        JOptionPane.INFORMATION_MESSAGE);
-                });
-                
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> {
-                    progressDialog.dispose();
-                    JOptionPane.showMessageDialog(this,
-                        "安装失败: " + ex.getMessage(),
-                        "错误",
-                        JOptionPane.ERROR_MESSAGE);
-                });
-            }
-        }).start();
-
-        progressDialog.setVisible(true);
+        // 创建对话框
+        JDialog dialog = new JDialog(this, "FFmpeg 下载说明", true);
+        dialog.setLayout(new BorderLayout());
+        
+        // 创建文本区域
+        JTextArea textArea = new JTextArea(message.toString());
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setBackground(dialog.getBackground());
+        textArea.setFont(new Font("Dialog", Font.PLAIN, 12));
+        
+        // 创建滚动面板
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(500, 300));
+        
+        // 创建按钮面板
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JButton copyButton = new JButton("复制下载链接");
+        JButton closeButton = new JButton("关闭");
+        
+        copyButton.addActionListener(e -> {
+            StringSelection selection = new StringSelection(downloadUrl);
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents(selection, null);
+            JOptionPane.showMessageDialog(dialog,
+                "下载链接已复制到剪贴板",
+                "提示",
+                JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        closeButton.addActionListener(e -> dialog.dispose());
+        
+        buttonPanel.add(copyButton);
+        buttonPanel.add(closeButton);
+        
+        // 添加组件到对话框
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        
+        // 显示对话框
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 
     private void deleteDirectory(File directory) {
