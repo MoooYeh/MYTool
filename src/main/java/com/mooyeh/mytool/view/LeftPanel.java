@@ -11,6 +11,7 @@ public class LeftPanel extends JPanel {
     private final Base64Panel base64Panel;
     private final JsonPanel jsonPanel;
     private JPanel rightPanel;
+    private JLabel titleLabel;
     
     // 与右侧一致
     private static final Color BACKGROUND_COLOR = null;
@@ -34,6 +35,29 @@ public class LeftPanel extends JPanel {
     
     public void setRightPanel(JPanel rightPanel) {
         this.rightPanel = rightPanel;
+        
+        // 创建标题标签
+        titleLabel = new JLabel("欢迎使用", JLabel.LEFT);
+        titleLabel.setFont(new Font("Dialog", Font.BOLD, 18));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        
+        // 将标题标签添加到右侧面板的顶部
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(BACKGROUND_COLOR);
+        topPanel.add(titleLabel, BorderLayout.WEST);
+        
+        // 用CardLayout包装原内容
+        JPanel contentPanel = new JPanel(new CardLayout());
+        contentPanel.setBackground(BACKGROUND_COLOR);
+        for (Component comp : rightPanel.getComponents()) {
+            contentPanel.add(comp, "welcome");
+        }
+        
+        // 清空右侧面板并添加新的布局
+        rightPanel.removeAll();
+        rightPanel.setLayout(new BorderLayout());
+        rightPanel.add(topPanel, BorderLayout.NORTH);
+        rightPanel.add(contentPanel, BorderLayout.CENTER);
     }
     
     private void initTree() {
@@ -41,7 +65,7 @@ public class LeftPanel extends JPanel {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("工具箱");
         
         // 创建工具分类
-        String[] categories = {"编码工具", "文本工具", "网络工具"};
+        String[] categories = {"编解码器", "文本工具", "网络工具"};
         String[][] tools = {
             {"Base64编解码", "URL编解码", "MD5加密"},
             {"文本对比", "文本格式化", "JSON工具", "正则测试"},
@@ -148,22 +172,26 @@ public class LeftPanel extends JPanel {
     }
     
     private void showWelcomePanel() {
-        ((CardLayout)rightPanel.getLayout()).show(rightPanel, "welcome");
+        titleLabel.setText("欢迎使用");
+        JPanel contentPanel = (JPanel)rightPanel.getComponent(1);
+        ((CardLayout)contentPanel.getLayout()).show(contentPanel, "welcome");
     }
     
     private void showBase64Panel() {
-        // 如果Base64面板还不存在，创建它
-        if (rightPanel.getComponentCount() < 2) {
-            rightPanel.add(base64Panel, "base64");
+        titleLabel.setText("Base64编解码");
+        JPanel contentPanel = (JPanel)rightPanel.getComponent(1);
+        if (contentPanel.getComponentCount() < 2) {
+            contentPanel.add(base64Panel, "base64");
         }
-        ((CardLayout)rightPanel.getLayout()).show(rightPanel, "base64");
+        ((CardLayout)contentPanel.getLayout()).show(contentPanel, "base64");
     }
     
     private void showJsonPanel() {
-        // 如果JSON面板还不存在，创建它
-        if (rightPanel.getComponentCount() < 3) {
-            rightPanel.add(jsonPanel, "json");
+        titleLabel.setText("JSON工具");
+        JPanel contentPanel = (JPanel)rightPanel.getComponent(1);
+        if (contentPanel.getComponentCount() < 3) {
+            contentPanel.add(jsonPanel, "json");
         }
-        ((CardLayout)rightPanel.getLayout()).show(rightPanel, "json");
+        ((CardLayout)contentPanel.getLayout()).show(contentPanel, "json");
     }
 } 

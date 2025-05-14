@@ -11,6 +11,9 @@ public class Base64Panel extends JPanel {
     private JTextArea inputArea;
     private JTextArea outputArea;
     private final Base64Controller base64Controller;
+    private ButtonGroup charsetGroup;
+    private JRadioButton utf8Button;
+    private JRadioButton asciiButton;
     
     @Autowired
     public Base64Panel(Base64Controller base64Controller) {
@@ -18,6 +21,30 @@ public class Base64Panel extends JPanel {
         
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // 创建顶部控制面板
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        topPanel.setBackground(null);
+        
+        // 创建字符集选择
+        JLabel charsetLabel = new JLabel("字符集：");
+        charsetGroup = new ButtonGroup();
+        utf8Button = new JRadioButton("UTF-8 编码", true);
+        asciiButton = new JRadioButton("ASCII 编码");
+        charsetGroup.add(utf8Button);
+        charsetGroup.add(asciiButton);
+        
+        // 创建按钮
+        JButton encodeButton = new JButton("编码");
+        JButton decodeButton = new JButton("解码");
+        
+        // 添加组件到顶部面板
+        topPanel.add(charsetLabel);
+        topPanel.add(utf8Button);
+        topPanel.add(asciiButton);
+        topPanel.add(Box.createHorizontalStrut(20));
+        topPanel.add(encodeButton);
+        topPanel.add(decodeButton);
         
         // 创建输入区域
         inputArea = new JTextArea();
@@ -34,18 +61,12 @@ public class Base64Panel extends JPanel {
         JScrollPane outputScrollPane = new JScrollPane(outputArea);
         outputScrollPane.setBorder(BorderFactory.createTitledBorder("输出"));
         
-        // 创建按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        JButton encodeButton = new JButton("编码");
-        JButton decodeButton = new JButton("解码");
-        buttonPanel.add(encodeButton);
-        buttonPanel.add(decodeButton);
-        
         // 添加编码解码功能
         encodeButton.addActionListener(e -> {
             try {
                 String input = inputArea.getText();
-                String encoded = base64Controller.encode(input);
+                String charset = utf8Button.isSelected() ? "UTF-8" : "ASCII";
+                String encoded = base64Controller.encode(input, charset);
                 outputArea.setText(encoded);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(),
@@ -56,7 +77,8 @@ public class Base64Panel extends JPanel {
         decodeButton.addActionListener(e -> {
             try {
                 String input = inputArea.getText();
-                String decoded = base64Controller.decode(input);
+                String charset = utf8Button.isSelected() ? "UTF-8" : "ASCII";
+                String decoded = base64Controller.decode(input, charset);
                 outputArea.setText(decoded);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(),
@@ -71,7 +93,7 @@ public class Base64Panel extends JPanel {
         splitPane.setDividerLocation(0.5);
         
         // 添加所有组件到面板
+        add(topPanel, BorderLayout.NORTH);
         add(splitPane, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
     }
 } 

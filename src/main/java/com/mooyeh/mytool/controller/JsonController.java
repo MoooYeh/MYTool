@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonLocation;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class JsonController {
@@ -15,43 +17,52 @@ public class JsonController {
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
     
-    public String format(String input) {
-        try {
-            // 先解析 JSON 字符串为对象
-            Object jsonObject = objectMapper.readValue(input, Object.class);
-            // 再格式化输出
-            return objectMapper.writeValueAsString(jsonObject);
-        } catch (Exception e) {
-            throw new RuntimeException("JSON 格式化失败: " + e.getMessage());
+    public String format(String input) throws Exception {
+        if (input == null || input.trim().isEmpty()) {
+            throw new Exception("JSON 不能为空");
         }
+        
+        Object jsonObject = objectMapper.readValue(input, Object.class);
+        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
     }
     
-    public String compress(String input) {
-        try {
-            // 先解析 JSON 字符串为对象
-            Object jsonObject = objectMapper.readValue(input, Object.class);
-            // 禁用缩进输出
-            objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
-            String compressed = objectMapper.writeValueAsString(jsonObject);
-            // 重新启用缩进输出
-            objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-            return compressed;
-        } catch (Exception e) {
-            throw new RuntimeException("JSON 压缩失败: " + e.getMessage());
+    public String compress(String input) throws Exception {
+        if (input == null || input.trim().isEmpty()) {
+            throw new Exception("JSON 不能为空");
         }
+        
+        Object jsonObject = objectMapper.readValue(input, Object.class);
+        return objectMapper.writeValueAsString(jsonObject);
     }
 
     public JsonValidationResult validate(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return new JsonValidationResult(false, "JSON 不能为空", -1);
+        }
+        
         try {
-            objectMapper.readValue(input, Object.class);
-            return new JsonValidationResult(true, null, -1, -1);
-        } catch (JsonParseException e) {
-            JsonLocation location = e.getLocation();
-            return new JsonValidationResult(false, e.getMessage(), 
-                (int)location.getCharOffset(), 
-                (int)location.getColumnNr());
+            objectMapper.readTree(input);
+            return new JsonValidationResult(true, null, -1);
         } catch (Exception e) {
-            return new JsonValidationResult(false, e.getMessage(), -1, -1);
+            String message = e.getMessage();
+            int offset = -1;
+            
+            // 尝试从错误消息中提取位置信息
+            if (message != null) {
+                int posIndex = message.indexOf(" at [Source:");
+                if (posIndex > 0) {
+                    message = message.substring(0, posIndex);
+                    // 尝试提取位置数字
+                    try {
+                        String posStr = message.substring(message.lastIndexOf(" ") + 1);
+                        offset = Integer.parseInt(posStr);
+                    } catch (NumberFormatException ex) {
+                        // 忽略解析错误
+                    }
+                }
+            }
+            
+            return new JsonValidationResult(false, message, offset);
         }
     }
 
@@ -59,29 +70,23 @@ public class JsonController {
         private final boolean valid;
         private final String errorMessage;
         private final int errorOffset;
-        private final int errorColumn;
-
-        public JsonValidationResult(boolean valid, String errorMessage, int errorOffset, int errorColumn) {
+        
+        public JsonValidationResult(boolean valid, String errorMessage, int errorOffset) {
             this.valid = valid;
             this.errorMessage = errorMessage;
             this.errorOffset = errorOffset;
-            this.errorColumn = errorColumn;
         }
-
+        
         public boolean isValid() {
             return valid;
         }
-
+        
         public String getErrorMessage() {
             return errorMessage;
         }
-
+        
         public int getErrorOffset() {
             return errorOffset;
-        }
-
-        public int getErrorColumn() {
-            return errorColumn;
         }
     }
 } 
